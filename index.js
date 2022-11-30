@@ -1,84 +1,111 @@
-const http = require("http");
-const path = require("path");
-const cors = require("cors");
-const morgan = require("morgan");
 const express = require('express');
-const bodyParser = require('body-parser');
-const jsonfile = require("jsonfile");
-const app = express();
+const http = require('http');
+const path = require('path');
+const cors = require('cors');
+const morgan = require('morgan');
 
+const app = express();
 const server = http.createServer(app);
 const port = 3000;
-const urlencodedParser = bodyParser.urlencoded({extended: false});
 
 app.use(cors());
-app.use(morgan("dev"));
-app.disable("x-powered-by");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.set('view engine', 'json');
-app.use(express.static("views"));
-// ---
+app.use(morgan('dev'));
+app.disable('x-powered-by');
 
-const JsonFile = path.join(__dirname, "/data.json")
+let data = require('./data.json');
 
-function parameters() {
-  return {listTask: jsonfile.readFileSync(JsonFile)}
-}
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).send('Вы сломали сервер!');
+});
 
-app.get('/book', function (request, response) {
-  response.render('library', parameters())
-})
+app.use((err, req, res, next) => {
+  if (error instanceof ForbiddenError) {
+    return res.status(403).send({
+      status: 'forbidden',
+      message: error.message,
+    });
+  }
+});
 
-app.get('/book:id', function (request, response) {
-  response.render('library', parameters())
-})
 
-app.post('/book', urlencodedParser, (request, response) => {
-  if (!request.body) return response.sendStatus(400)
-  const data_task = {
-	task_id: parameters().listTask.length+1,
-	head: request.body.head,
-    description: request.body.desc,
-    date: request.body.date,
-    author: request.body.author,
-    statusTask: "wait"
-  };
-  
-  jsonfile.readFile(JsonFile, (error, object) => {
-	  if (error) throw error
-	  object.push(data_task);
-	  jsonfile.writeFile(JsonFile, object, { spaces: 2 }, (error) => {
-		  if (error) throw error;
-	  });
+let jsonfile = require('jsonfile');
+const { name } = require('ejs');
+
+let file = jsonfile.readFileSync('data.json');
+
+app.get('/book', (req, res) => {
+  res.status(200).type('text/plain')
+  res.send(JSON.stringify(data, null, '\t'))
+});
+
+app.get('/book/:id', (req, res) => {
+  res.status(200).type('text/plain')
+  let id = req.params.id;
+  res.send(JSON.stringify(data[id], null, '\t'));
+
+});
+
+app.put('/book/:id', function (req, res) {
+  let id = req.params.id;
+  let {name, date1, date2, author, year} = req.body;
+
+  jsonfile.readFile('data.json', function (err, obj) {
+    let fileObj = obj;
+    fileObj[id].name = name;
+    fileObj[id].date1 = date1;
+    fileObj[id].date2 = date2;
+    fileObj[id].author = author;
+    fileObj[id].year = year;
+    jsonfile.writeFile('data.json', fileObj, function (err) {
+      if (err) throw err;
+    });
+    res.send(JSON.stringify(data[id], null, '\t'));
   });
-  response.redirect(303, '/library')
 });
 
-app.put('/book/:id', (request, response) => {
-  jsonfile.readFile(JsonFile, (error, object) => {
-    if (error) throw error
-    for(let i = 0; i < object.length; i++) {
-      if (object[i].task_id == request.params.id) {
-        object.splice(i, 1)
+app.post('/book', (req, res) => {
+  if (!req.body) return res.sendStatus(400);
+  const user = {
+    id: file.length + 1,
+    name: req.body.name,
+    date1: req.body.date1,
+    date2: req.body.date2,
+    author: req.body.author,
+    year: req.body.year,
+  };
+  jsonfile.readFile('data.json', (err, obj) => {
+    if (err) throw err;
+    let fileObj = obj;
+    fileObj.push(user);
+    jsonfile.writeFile('data.json', fileObj, (err) => {
+      if (err) throw err;
+    });
+    res.send(JSON.stringify(data, null, '\t'));
+  });
+});
+
+app.delete('/book/:id', (req, res) => {
+  jsonfile.readFile('data.json', (err, obj) => {
+    if (err) throw err;
+    let fileObj = obj;
+    for (let i = 0; i < fileObj.length; i++) {
+      if (fileObj[i].id == req.params.id) {
+        fileObj.splice(i, 1);
       }
     }
+    jsonfile.writeFile('data.json', fileObj, { spaces: 2 }, (err) => {
+      if (err) throw err;
+    });
+    res.send(JSON.stringify(data, null, '\t'));
+  });
+});
 
-app.delete('/book/:id', (request, response) => {
-  jsonfile.readFile(JsonFile, (error, object) => {
-    if (error) throw error
-    for(let i = 0; i < object.length; i++) {
-      if (object[i].task_id == request.params.id) {
-        object.splice(i, 1)
-      }
-    }
-
-// ---
+//Go the SERVERs
 server.listen(port, () => {
-	console.log("\x1b[35m%s\x1b[0m", `The server is running on the port ${port}`);
-	console.log("\x1b[32m%s\x1b[0m", `http://localhost:${port}/`);
+  console.log('\x1b[35m%s\x1b[0m', `The server is running on the port ${port}`);
+  console.log('\x1b[32m%s\x1b[0m', `http://localhost:${port}/`);
+  // console.log(`Worker ${cluster.worker.id} launched`);
 });
-
-
-
-
