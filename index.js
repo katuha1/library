@@ -32,7 +32,6 @@ app.use((err, req, res, next) => {
 
 
 let jsonfile = require('jsonfile');
-const { name } = require('ejs');
 
 let file = jsonfile.readFileSync('data.json');
 
@@ -50,13 +49,13 @@ app.get('/book/:id', (req, res) => {
 
 app.put('/book/:id', function (req, res) {
   let id = req.params.id;
-  let {name, date1, date2, author, year} = req.body;
+  let {name, data1, data2, author, year} = req.body;
 
   jsonfile.readFile('data.json', function (err, obj) {
     let fileObj = obj;
     fileObj[id].name = name;
-    fileObj[id].date1 = date1;
-    fileObj[id].date2 = date2;
+    fileObj[id].data1 = data1;
+    fileObj[id].data2 = data2;
     fileObj[id].author = author;
     fileObj[id].year = year;
     jsonfile.writeFile('data.json', fileObj, function (err) {
@@ -71,8 +70,8 @@ app.post('/book', (req, res) => {
   const user = {
     id: file.length + 1,
     name: req.body.name,
-    date1: req.body.date1,
-    date2: req.body.date2,
+    data1: req.body.data1,
+    data2: req.body.data2,
     author: req.body.author,
     year: req.body.year,
   };
