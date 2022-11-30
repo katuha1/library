@@ -16,7 +16,7 @@ app.use(morgan("dev"));
 app.disable("x-powered-by");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.set('view engine', 'pug');
+app.set('view engine', 'json');
 app.use(express.static("views"));
 // ---
 
@@ -26,8 +26,15 @@ function parameters() {
   return {listTask: jsonfile.readFileSync(JsonFile)}
 }
 
+app.get('/book', function (request, response) {
+  response.render('library', parameters())
+})
 
-app.post('/dashboard/addtask', urlencodedParser, (request, response) => {
+app.get('/book:id', function (request, response) {
+  response.render('library', parameters())
+})
+
+app.post('/book', urlencodedParser, (request, response) => {
   if (!request.body) return response.sendStatus(400)
   const data_task = {
 	task_id: parameters().listTask.length+1,
@@ -45,10 +52,10 @@ app.post('/dashboard/addtask', urlencodedParser, (request, response) => {
 		  if (error) throw error;
 	  });
   });
-  response.redirect(303, '/dashboard')
+  response.redirect(303, '/library')
 });
 
-app.post('/dashboard/deletetask/:id', (request, response) => {
+app.put('/book/:id', (request, response) => {
   jsonfile.readFile(JsonFile, (error, object) => {
     if (error) throw error
     for(let i = 0; i < object.length; i++) {
@@ -56,18 +63,15 @@ app.post('/dashboard/deletetask/:id', (request, response) => {
         object.splice(i, 1)
       }
     }
-	
-    jsonfile.writeFile(JsonFile, object, { spaces: 2 }, (error) => {
-      if (error) throw error;
-    });
-  });
-  response.redirect(303, '/dashboard');
-});
 
-
-app.get('/dashboard', function (request, response) {
-  response.render('dashboard', parameters())
-})
+app.delete('/book/:id', (request, response) => {
+  jsonfile.readFile(JsonFile, (error, object) => {
+    if (error) throw error
+    for(let i = 0; i < object.length; i++) {
+      if (object[i].task_id == request.params.id) {
+        object.splice(i, 1)
+      }
+    }
 
 // ---
 server.listen(port, () => {
