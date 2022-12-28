@@ -3,10 +3,13 @@ const http = require('http');
 const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
+const bodyParser = require('body-parser')
+const urlencodedParser = bodyParser.urlencoded({ extended: false })
 
 const app = express();
 const server = http.createServer(app);
 const port = 3000;
+module.exports = app
 
 app.use(cors());
 app.use(express.json());
@@ -102,9 +105,38 @@ app.delete('/book/:id', (req, res) => {
   });
 });
 
+app.put('/book/:id', urlencodedParser, (req, res) => {
+  const book = jsonfile.readFileSync(path);
+  const bookIndex = book.findIndex(({ id }) => id == req.params.id);
+
+
+  if(bookIndex === -1) {
+      res.send('book not found');
+      return;
+  }
+
+  const targetBook = book[bookIndex];
+
+  book[bookIndex] = {
+      id: targetBook.id,
+      name: req.body.name ?? targetBook.name,
+      giveDate: req.body.giveDate ?? targetBook.data1,
+      backDate: req.body.backDate ?? targetBook.data2,
+      author: req.body.author ?? targetBook.author,
+      year: req.body.year ?? targetBook.year
+  }
+
+  jsonfile.writeFileSync(path, book, { spaces: 2 });
+  return res.status(200).json({
+      status: "success",
+      message: "book has been edited"
+  })
+
+})
 //Go the SERVERs
 server.listen(port, () => {
   console.log('\x1b[35m%s\x1b[0m', `The server is running on the port ${port}`);
   console.log('\x1b[32m%s\x1b[0m', `http://localhost:${port}/`);
   // console.log(`Worker ${cluster.worker.id} launched`);
 });
+
